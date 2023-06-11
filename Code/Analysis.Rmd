@@ -1,0 +1,675 @@
+---
+title: "Descriptive Stats, Feature Selection, Estimates and Interpretations"
+author: "Nicholas Paschall"
+date: '2023-05-17'
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+set.seed(1234)
+
+library(readr)
+library(tidyverse)
+library(caret)
+library(glmnet)
+library(ggplot2)
+library(RColorBrewer)
+library(leaps)
+library(bestglm)
+library(boot)
+library(ggcorrplot)
+library(hrbrthemes)
+library(rlang)
+library(e1071)
+library(MASS)
+library(pROC)
+library(dplyr)
+library(gridExtra)
+
+setwd("~/Documents/STSCI 4100")
+combo.df <- read_csv("combo.df.csv")[,c(6:13, 17:24, 28, 27)]
+```
+
+# **Descriptive Statistics**
+
+## *Summaries*
+```{r}
+length( which(combo.df$draft.fac==1) )
+length( which(combo.df$draft.fac==0) )
+nrow( combo.df )
+```
+### Ht
+```{r}
+summary(combo.df$Ht)[c(1,3,6)]
+sd(combo.df$Ht)
+summary(glm(draft.fac~Ht, data=combo.df, family=binomial))$coefficients[2,4]
+ht.hist <- ggplot(combo.df, aes(x = cut(Ht, breaks=c(5, 6.1, 6.2, 6.3, 6.6)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Height", title="Ht", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+ht.hist
+```
+### Wt
+```{r}
+summary(combo.df$Wt)[c(1,3,6)]
+sd(combo.df$Wt)
+summary(glm(draft.fac~Wt, data=combo.df, family=binomial))$coefficients[2,4]
+wt.hist <- ggplot(combo.df, aes(x = cut(Wt, breaks=c(201, 233, 238, 245, 260)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Weight", title="Wt", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+wt.hist
+```
+### forty_yd
+```{r}
+summary(combo.df$forty_yd)[c(1,3,6)]
+sd(combo.df$forty_yd)
+summary(glm(draft.fac~forty_yd, data=combo.df, family=binomial))$coefficients[2,4]
+forty_yd.hist <- ggplot(combo.df, aes(x = cut(forty_yd, breaks=c(4.37, 4.62, 4.72, 4.81, 5.09)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Forty Yard Dash", title="forty_yd", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+forty_yd.hist
+```
+### vertical
+```{r}
+summary(combo.df$vertical)[c(1,3,6)]
+sd(combo.df$vertical)
+summary(glm(draft.fac~vertical, data=combo.df, family=binomial))$coefficients[2,4]
+vertical.hist <- ggplot(combo.df, aes(x = cut(vertical, breaks=c(26, 31.5, 33, 35, 43)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Vertical Jump", title="vertical", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+vertical.hist
+```
+### bench
+```{r}
+summary(combo.df$bench)[c(1,3,6)]
+sd(combo.df$bench)
+summary(glm(draft.fac~bench, data=combo.df, family=binomial))$coefficients[2,4]
+bench.hist <- ggplot(combo.df, aes(x = cut(bench, breaks=c(10, 19, 21, 24, 36)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Bench Press", title="bench", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+bench.hist
+```
+### broad_jump
+```{r}
+summary(combo.df$broad_jump)[c(1,3,6)]
+sd(combo.df$broad_jump)
+summary(glm(draft.fac~broad_jump, data=combo.df, family=binomial))$coefficients[2,4]
+broad_jump.hist <- ggplot(combo.df, aes(x = cut(broad_jump, breaks=c(103, 115, 118, 122, 140)), 
+                    fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Broad Jump", title="broad_jump", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+broad_jump.hist
+```
+### cone
+```{r}
+summary(combo.df$cone)[c(1,3,6)]
+sd(combo.df$cone)
+summary(glm(draft.fac~cone, data=combo.df, family=binomial))$coefficients[2,4]
+cone.hist <- ggplot(combo.df, aes(x = cut(cone, breaks=c(6.63, 7.02, 7.14, 7.26, 7.87)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Cone Time", title="cone", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+cone.hist
+```
+### shuttle
+```{r}
+summary(combo.df$shuttle)[c(1,3,6)]
+sd(combo.df$shuttle)
+summary(glm(draft.fac~shuttle, data=combo.df, family=binomial))$coefficients[2,4]
+shuttle.hist <- ggplot(combo.df, aes(x = cut(shuttle, breaks=c(3.99, 4.26, 4.33, 4.39, 4.97)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Shuttle", title="shuttle", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+shuttle.hist
+```
+### tackles_solo
+```{r}
+summary(combo.df$tackles_solo)[c(1,3,6)]
+sd(combo.df$tackles_solo)
+summary(glm(draft.fac~tackles_solo, data=combo.df, family=binomial))$coefficients[2,4]
+tackles_solo.hist <- ggplot(combo.df, aes(x = cut(tackles_solo, breaks=c(5.9, 83, 117.5, 151, 339)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Solo Tackles", title="tackles_solo", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+tackles_solo.hist
+```
+### tackles_ast
+```{r}
+summary(combo.df$tackles_ast)[c(1,3,6)]
+sd(combo.df$tackles_ast)
+summary(glm(draft.fac~tackles_ast, data=combo.df, family=binomial))$coefficients[2,4]
+tackles_ast.hist <- ggplot(combo.df, aes(x = cut(tackles_ast, breaks=c(1, 57, 92, 117, 211, 311)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Assisted Tackles", title="tackles_ast", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+tackles_ast.hist
+```
+### tackles_tot
+```{r}
+summary(combo.df$tackles_tot)[c(1,3,6)]
+sd(combo.df$tackles_tot)
+summary(glm(draft.fac~tackles_tot, data=combo.df, family=binomial))$coefficients[2,4]
+tackles_tot.hist <- ggplot(combo.df, aes(x = cut(tackles_tot, breaks=c(7, 144, 210.5, 267, 633.5)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Total Tackles", title="tackles_tot", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+tackles_tot.hist
+```
+### tackles_loss
+```{r}
+summary(combo.df$tackles_loss)[c(1,3,6)]
+sd(combo.df$tackles_loss)
+summary(glm(draft.fac~tackles_loss, data=combo.df, family=binomial))$coefficients[2,4]
+tackles_loss.hist <- ggplot(combo.df, aes(x = cut(tackles_loss, breaks=c(-1, 16, 22.5, 29.125, 75)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Tackles for Loss", title="tackles_loss", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+tackles_loss.hist
+```
+### sacks
+```{r}
+summary(combo.df$sacks)[c(1,3,6)]
+sd(combo.df$sacks)
+summary(glm(draft.fac~sacks, data=combo.df, family=binomial))$coefficients[2,4]
+sacks.hist <- ggplot(combo.df, aes(x = cut(sacks, breaks=c(-1, 4.5, 7, 12, 38)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Sacks", title="sacks", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+sacks.hist
+```
+### def_int
+```{r}
+summary(combo.df$def_int)[c(1,3,6)]
+sd(combo.df$def_int)
+summary(glm(draft.fac~def_int, data=combo.df, family=binomial))$coefficients[2,4]
+def_int.hist <- ggplot(combo.df, aes(x = cut(def_int, breaks=c(-1, 1, 3, 15)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Defensive Interceptions", title="def_int", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+def_int.hist
+```
+### pass_defended
+```{r}
+summary(combo.df$pass_defended)[c(1,3,6)]
+sd(combo.df$pass_defended)
+summary(glm(draft.fac~pass_defended, data=combo.df, family=binomial))$coefficients[2,4]
+pass_defended.hist <- ggplot(combo.df, aes(x = cut(pass_defended, breaks=c(-1, 3, 5, 8, 27)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Passes Defended", title="pass_defended", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+pass_defended.hist
+```
+### forced_fumble
+```{r}
+summary(combo.df$forced_fumble)[c(1,3,6)]
+sd(combo.df$forced_fumble)
+summary(glm(draft.fac~forced_fumble, data=combo.df, family=binomial))$coefficients[2,4]
+forced_fumble.hist <- ggplot(combo.df, aes(x = cut(forced_fumble, breaks=c(-1, 1, 2, 4, 16)), 
+                     fill = factor(draft.fac)))+ 
+    geom_bar(position = "fill") +
+    stat_count(geom = "text", 
+               aes(label=..count..), 
+               position = position_fill(vjust = 0.5), size=7) +
+    theme_light() + 
+    labs(y="Proportion", x="Forced Fumbles", title="forced_fumble", fill="Draft Status") + 
+    theme(panel.grid.minor=element_blank(), legend.position = "bottom",
+          axis.text.x=element_text(size=15), plot.title=element_text(size=17), 
+          plot.subtitle=element_text(size=14), axis.title.x=element_text(size=14), 
+          legend.text=element_text(size=14), legend.title=element_text(size=14),
+          axis.title.y=element_text(size=14), axis.text.y=element_text(size=15) )
+forced_fumble.hist
+```
+
+\newpage 
+
+# **Feature Selection**
+
+## *Data Preparation*
+```{r}
+set.seed(1234)
+# standardization
+x <- scale(combo.df[1:16])
+y <- combo.df$draft.fac
+year <- combo.df$year
+combo.df <- as.data.frame( cbind(x, y, year) ) %>%
+    rename(draft.fac = y)
+
+# Upsampling for Unrepresented Class (Undrafted Players)
+draft.fac.factor <- as.factor( combo.df$draft.fac )
+prop.table( table( draft.fac.factor ) ) # very disproportionate classes
+
+predictor.df <- combo.df[ , c(1:16, 18) ]
+combo.df <- upSample( x=predictor.df, y=draft.fac.factor ) %>%
+    rename( draft.fac=Class )
+table( combo.df$draft.fac ) # proportionate classes 
+
+combo.df$draft.fac <- as.numeric( as.character( combo.df$draft.fac ) )
+
+# box plots of combine statistic variables
+ggplot( data=combo.df ) +
+    geom_boxplot( aes(x="forty_yd", y=forty_yd), fill = brewer.pal(12, "Set3")[1] ) +
+    geom_boxplot( aes(x="vertical", y=vertical), fill = brewer.pal(12, "Set3")[2] ) +
+    geom_boxplot( aes(x="broad_jump", y=broad_jump), fill = brewer.pal(12, "Set3")[3] ) +
+    geom_boxplot( aes(x="bench", y=bench), fill = brewer.pal(12, "Set3")[4] ) +
+    geom_boxplot( aes(x="shuttle", y=shuttle), fill = brewer.pal(12, "Set3")[5] ) +
+    geom_boxplot( aes(x="cone", y=cone), fill = brewer.pal(12, "Set3")[6] ) +
+    theme_light() + labs(title="Combine Variables") +
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1, size=15),
+          axis.text.y = element_text(size=15), plot.title=element_text( size=17))
+
+# box plots of career statistic variables
+ggplot( data=combo.df ) +
+    geom_boxplot( aes(x="tackles_solo", y=tackles_solo), fill=brewer.pal(12, "Set3")[1] ) +
+    geom_boxplot( aes(x="tackles_ast", y=tackles_ast), fill=brewer.pal(12, "Set3")[2] ) +
+    geom_boxplot( aes(x="tackles_tot", y=tackles_tot), fill=brewer.pal(12, "Set3")[3] ) +
+    geom_boxplot( aes(x="tackles_loss", y=tackles_loss), fill=brewer.pal(12, "Set3")[4] ) +
+    geom_boxplot( aes(x="sacks", y=sacks), fill=brewer.pal(12, "Set3")[5] ) +
+    geom_boxplot( aes(x="def_int", y=def_int), fill=brewer.pal(12, "Set3")[6] ) +
+    geom_boxplot( aes(x="pass_defended", y=pass_defended), fill=brewer.pal(12, "Set3")[7] ) +
+    geom_boxplot( aes(x="forced_fumble", y=forced_fumble), fill=brewer.pal(12, "Set3")[8] ) +
+    theme_light() + labs(title="Career Variables") +
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank(), 
+          axis.text.x = element_text(angle = 45, hjust = 1, size=15),
+          axis.text.y = element_text(size=15), plot.title=element_text( size=17))
+```
+
+## *Correlation Matrices*
+```{r}
+# combine correlation matrix
+combine.mat <- as.matrix( combo.df[ ,c(1:8, 18) ] )
+combine.corr <- round( cor( combine.mat ), 1 )
+ggcorrplot( combine.corr, lab=TRUE ) +
+    ggtitle( "Combine Measurements" ) +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.title.x = element_blank(), axis.title.y = element_blank())
+
+# career stats correlation matrix
+career.mat <- as.matrix( combo.df[ ,c(9:16,18) ] )
+career.corr <- round( cor( career.mat ), 1 )
+ggcorrplot( career.corr, lab=TRUE ) +
+    ggtitle( "Career Measurements" ) +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.title.x = element_blank(), axis.title.y = element_blank()) 
+
+full.mat <- as.matrix( combo.df[ ,c( 1:17 ) ] )
+full.corr <- round( cor( full.mat ), 1 )
+ggcorrplot( full.corr, lab=TRUE )
+```
+
+## *Best Subset Selection*
+```{r}
+set.seed(1234)
+draft.glm <- combo.df %>%
+    rename( y = draft.fac ) %>% dplyr::select( -year, -tackles_tot ) # get rid of tackles_tot due to multicollinearity
+
+# best subset based off AIC
+best.sub.AIC <- bestglm( draft.glm,
+                         family=binomial,
+                         method="exhaustive",
+                         IC="AIC" )
+# best subset based off BIC
+best.sub.BIC <- bestglm( draft.glm,
+                         family=binomial,
+                         method="exhaustive",
+                         IC="BIC" )
+
+# creates dataframe for each model and calculates McFadden R^2 and deviance
+model.stats <- function( covariates ){
+    df <- data.frame( model = rep( NA, times=length( covariates ) ) )
+    
+    for( i in 1:length(covariates) ){
+        if( i ==1 ){
+            tmp.formula <- "draft.fac ~ 1"
+            mod <- glm( tmp.formula, data=combo.df, family="binomial" )
+        }else{
+            tmp.formula <- paste( covariates[ as.matrix( best.sub.AIC$Subsets[i, 1:16] )], collapse=" + " )
+            tmp.formula <- paste( "draft.fac ~", tmp.formula )
+            mod <- glm( tmp.formula, data=combo.df, family="binomial" )
+        }
+        df$mcfad.R[i] <- 1 - logLik(mod) / logLik( glm(draft.fac~1, data=combo.df, family="binomial") )
+        df$dev[i] <- mod$deviance
+        df$model[i] <- tmp.formula
+    }
+    return( df )
+}
+
+covariates <- colnames( best.sub.AIC$Subsets[, 1:16 ] )
+covariates[1] <- "1"
+glm.model.stats <- model.stats(covariates)
+glm.model.stats$aic <- best.sub.AIC$Subsets$AIC
+glm.model.stats$bic <- best.sub.BIC$Subsets$BIC
+
+head( glm.model.stats, n=10 )
+
+
+# Deviance Plot for Each Model
+ggplot( data = glm.model.stats, aes(x=1:16, y=dev, label=round(dev, 1) ) ) +
+    geom_point() +
+    geom_path(alpha=0.3) +
+    theme_light() + scale_x_continuous( n.breaks=16 ) +
+    scale_y_continuous( n.breaks=10 ) +
+    labs( y="Deviance", x="Model Number", title="Model Deviances") +
+    geom_text( size=2.5, vjust= -0.75 ) +
+    theme(axis.text.x=element_text(size=15), axis.text.y=element_text(size=15),
+          plot.title=element_text(size=17), axis.title.x=element_text(size=13),
+          axis.title.y=element_text(size=13))
+
+# McFadden R-Squared Values for Each Model
+mcfad <- ggplot( data = glm.model.stats, aes(x=1:16, y=mcfad.R, label=round(mcfad.R, 2) ) ) +
+    geom_point() +
+    geom_path(alpha=0.3) +
+    theme_light() + scale_x_continuous( n.breaks=9 ) +
+    scale_y_continuous( n.breaks = 10 ) +
+    labs( y="McFadden R-Squared", x="Model Number", title="McFadden R^2" ) +
+    #geom_text( size=2.5, vjust=-0.75 ) +
+    theme(axis.text.x=element_text(size=15), axis.text.y=element_text(size=15),
+          plot.title=element_text(size=17), axis.title.x=element_text(size=13),
+          axis.title.y=element_text(size=13))
+
+# AIC/BIC Values for Each Model
+aicbicdev <- ggplot( data = glm.model.stats ) +
+    geom_point( aes(x=1:16, y=aic, color="AIC") ) +
+    geom_path( aes(x=1:16, y=aic, color="AIC"), alpha=1 ) +
+    #geom_text( aes(x=1:16, y=aic, label=round(aic, 1) ), size=2.5, vjust=-0.75 ) +
+    geom_point( aes(x=1:16, y=bic, color="BIC") ) +
+    geom_path( aes(x=1:16, y=bic, color="BIC"), alpha=1 ) +
+    #geom_text( aes(x=1:16, y=bic, label=round(bic, 1) ), size=2.5, vjust=-0.75 ) +
+    geom_point( aes(x=1:16, y=dev, color="Deviance") ) +
+    geom_path( aes(x=1:16, y=dev, color="Deviance"), alpha=1 ) +
+    #geom_text( aes(x=1:16, y=dev, label=round(dev, 1) ), size=2.5, vjust=-0.75) +
+    theme_light() + scale_y_continuous(n.breaks = 10) +
+    scale_x_continuous( n.breaks=9 ) +
+    labs( y="Criterion", x="Model Number", title="AIC, BIC, and Deviance", color="" ) +
+    theme(axis.text.x=element_text(size=15), axis.text.y=element_text(size=15),
+          plot.title=element_text(size=17), axis.title.x=element_text(size=13),
+          axis.title.y=element_text(size=13), legend.position = "top")
+
+grid.arrange(mcfad, aicbicdev, nrow=1)
+```
+
+## *Cross Validation*
+```{r}
+set.seed(1234)
+cv.errors <- function( df ){
+    df <- data.frame( model=df$model )
+    for( i in 1:nrow( df ) ){
+        glm.fit <- glm( df$model[i], data=combo.df, family="binomial" )
+        df$loocv[i] <- cv.glm( combo.df, glm.fit )$delta[1]
+        df$kfcv.5[i] <- cv.glm( combo.df, glm.fit, K=5)$delta[1]
+        df$kfcv.10[i] <- cv.glm( combo.df, glm.fit, K=10)$delta[1]
+    }
+    return( df )
+}
+error.df <- cv.errors( glm.model.stats )
+head(error.df, n=10)
+
+error.df[ which.min(error.df$loocv), ]
+error.df[ which.min(error.df$kfcv.5), ]
+error.df[ which.min(error.df$kfcv.10), ]
+
+ggplot( data=error.df ) +
+    geom_path( aes(x=1:16, y=loocv, colour="LOOCV") ) +
+    geom_point( aes(x=1:16, y=loocv, colour="LOOCV") ) +
+    geom_path( aes(x=1:16, y=kfcv.5, colour="5-Fold CV") ) +
+    geom_point( aes(x=1:16, y=kfcv.5, colour="5-Fold CV") ) +
+    geom_path( aes(x=1:16, y=kfcv.10, colour="10-Fold CV") ) +
+    geom_point( aes(x=1:16, y=kfcv.10, colour="10-Fold CV") ) +
+    theme_light() + scale_y_continuous(n.breaks=10) + scale_x_continuous(n.breaks=16) +
+    labs(y="Validation Error Rate", x="Model #", colour="CV Method", title="Validation Error Rates for Each Model") +
+    theme(axis.text.x=element_text(size=15), axis.text.y=element_text(size=15),
+          plot.title=element_text(size=17), axis.title.x=element_text(size=13),
+          axis.title.y=element_text(size=13), legend.position = "right")
+```
+
+
+## *Test Error Rates*
+```{r}
+set.seed(1234)
+
+prediction.errors <- function( formula ){
+    training.set <- combo.df %>% filter( year != 2022 )
+    testing.set <- combo.df %>% filter( year == 2022 )
+    mod <- glm( formula, data=training.set, family=binomial)
+    pred <- predict( mod, testing.set, type="response" )
+    class <- rep( 0, times=nrow(testing.set) )
+    class[ pred > 0.5 ] <- 1
+    tab <- table( class, testing.set$draft.fac)
+    return( tab )
+}
+
+
+prediction.errors( "draft.fac ~ 1 + Wt + forty_yd + bench + shuttle + tackles_solo" )
+( error <- (6+1) / 38 )
+```
+
+## *ROC Curve*
+```{r}
+set.seed(1234)
+roc.curve <- function( formula ){
+    
+    training.set <- combo.df %>% filter( year != 2022 )
+    testing.set <- combo.df %>% filter( year == 2022 )
+    mod <- glm( formula, data=training.set, family=binomial )
+    pred <- predict( mod, testing.set, type="response" )
+    class <- rep( 0, times=nrow(testing.set) )
+    class[ pred > 0.6 ] <- 1
+
+    roc_score <- roc(
+        as.factor( class ),
+        testing.set$draft.fac )
+return( roc_score )
+}
+roc_data <- roc.curve( "draft.fac ~ 1 + Wt + forty_yd + bench + shuttle + tackles_solo"  )
+
+roc_df <- data.frame(
+  FPR = roc_data$specificities,
+  TPR = roc_data$sensitivities
+)
+roc_df$FPR
+roc_df$TPR
+
+roc_plot <- ggplot(roc_df, aes(x = FPR, y = TPR)) +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour="red", alpha=0.5) +
+  labs( x = "False Positive Rate (1 - Specificity)",
+       y = "True Positive Rate (Sensitivity)",
+       subtitle = "draft.fac ~ 1 + Wt + forty_yd + bench + shuttle + tackles_solo") +
+    theme_ipsum() +
+    annotate( "text", x=0.5, y=0.5, 
+              label=paste( "AUC =", round(roc_data$auc, 3)), color="blue", size=4) +
+    theme(axis.text.x=element_text(size=15), axis.text.y=element_text(size=15),
+          plot.title=element_text(size=17), axis.title.x=element_text(size=13),
+          axis.title.y=element_text(size=13), legend.position = "right")
+roc_plot
+```
+
+\newpage
+
+# **Interpretations**
+
+```{r}
+setwd("~/Documents/STSCI 4100")
+combo.df <- read_csv("combo.df.csv")[,c(6:13, 17:24, 28, 27)]
+
+
+final.mod <- glm(draft.fac ~ Wt+forty_yd+bench+shuttle+tackles_solo,
+                 data=combo.df, family=binomial)
+summary(final.mod)
+```
+$draft.fac{_i} = 27.9033+0.091(Wt){_i}-7.7742(forty\_yd){_i}+0.0759(bench){_i}-3.492(shuttle){_i}+0.0095(tackles\_solo){_i} + e{_i}$
+
+## *Coefficients and Interpretations*
+```{r}
+
+( beta1 <- final.mod$coefficients[2] )
+( beta2 <- final.mod$coefficients[3] )
+( beta3 <- final.mod$coefficients[4] )
+( beta4 <- final.mod$coefficients[5] )
+( beta5 <- final.mod$coefficients[6] )
+
+
+
+( OR.1 <- exp(beta1) )
+( OR.2 <- exp(0.01*beta2) )
+( OR.3 <- exp(beta3) )
+( OR.4 <- exp(0.01*beta4) )
+( OR.5 <- exp(beta5) )
+
+    
+    
+    
+
+confint(final.mod)
+
+
+( OR.CI.1 <- c(exp(0.057326753), exp(0.12725880)) )
+( OR.CI.2 <- c(exp(0.01*-10.505913203), exp(0.01*-5.25160681)) )
+( OR.CI.3 <- c(exp(0.003271339), exp(0.15129353)) )
+( OR.CI.4 <- c(exp(0.01*-6.001425515), exp(0.01*-1.06292465)) )
+( OR.CI.5 <- c(exp(0.003976453), exp(0.01539862)) )
+
+
+```
